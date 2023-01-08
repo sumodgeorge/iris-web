@@ -16,6 +16,8 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+import warnings
+
 from sqlalchemy import and_
 from sqlalchemy import or_
 
@@ -95,13 +97,29 @@ class SearchParser(object):
 
             cpe = self.parser.parse_string(query)
             tables, query = self.parse_sub_expr(expr=cpe[0])
+            logs = []
 
-            results = db.session.query(*tables).filter(query).all()
-            return results
+            with warnings.catch_warnings(record=True) as caught_warnings:
+
+                warnings.simplefilter("always")
+                results = db.session.query(*tables).filter(query).all()
+
+                if caught_warnings:
+
+                    if "Apply join condition" in str(caught_warnings[0].message):
+                        logs = [
+                            "Search query mixes incompatible fields, please refine your query. Search results may be incomplete."
+                        ]
+                    else:
+                        logs = [str(w.message) for w in caught_warnings]
+
+                    log.warning(f"Search query produced a warning: {caught_warnings[0].message}")
+
+            return True, logs ,results
 
         except pp.ParseException as e:
             log.error("Error parsing query: %s", e)
-            return None
+            return False, e.__str__(), None
 
     def parse_sub_expr(self, expr):
         if not isinstance(expr, pp.ParseResults):

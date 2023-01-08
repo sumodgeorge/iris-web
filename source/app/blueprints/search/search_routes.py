@@ -46,6 +46,7 @@ from app.models.models import Notes
 from app.models.models import Tlp
 from app.util import ac_api_requires
 from app.util import ac_requires
+from app.util import response_error
 from app.util import response_success
 
 search_blueprint = Blueprint('search',
@@ -90,9 +91,14 @@ def search_file_post(caseid: int):
     if search_type == 'query':
 
         sp = SearchParser()
-        results = [r._asdict() for r in sp.parse(search_value)]
+        success, logs, results = sp.parse(search_value)
+        if success:
 
-        return response_success({'results': results})
+            results = [r._asdict() for r in results]
+            return response_success(data={'results': results, 'logs': logs})
+
+        else:
+            return response_error(msg='Search failed', data={'logs': logs})
 
     if search_type == "ioc":
         res = Ioc.query.with_entities(
