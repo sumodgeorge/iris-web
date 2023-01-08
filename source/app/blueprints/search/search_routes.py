@@ -27,10 +27,12 @@ from flask import session
 from flask import url_for
 from flask_login import current_user
 from sqlalchemy import and_
+from sqlalchemy import or_
 
 from app.forms import SearchForm
 from app.iris_engine.access_control.utils import ac_flag_match_mask
 from app.iris_engine.access_control.utils import ac_get_fast_user_cases_access
+from app.iris_engine.search.search import SearchParser
 from app.iris_engine.utils.tracker import track_activity
 from app.models import Comments
 from app.models.authorization import Permissions
@@ -52,6 +54,23 @@ search_blueprint = Blueprint('search',
 
 
 # CONTENT ------------------------------------------------
+@search_blueprint.route('/search/query', methods=['POST'])
+@ac_api_requires(Permissions.server_administrator)
+def search_query(caseid: int):
+    jsdata = request.get_json()
+    if jsdata is None:
+        return response_success({'results': []})
+
+    query = jsdata.get('query', '')
+    if query == '':
+        return response_success({'results': []})
+
+    sp = SearchParser()
+    sp.parse(query)
+
+    return response_success({'results': []})
+
+# CONTENT ------------------------------------------------
 @search_blueprint.route('/search', methods=['POST'])
 @ac_api_requires(Permissions.server_administrator)
 def search_file_post(caseid: int):
@@ -64,13 +83,16 @@ def search_file_post(caseid: int):
 
     track_activity("started a global search for {} on {}".format(search_value, search_type))
 
-    # if not ac_flag_match_mask(session['permissions'],  Permissions.search_across_all_cases.value):
-    #     user_search_limitations = ac_get_fast_user_cases_access(current_user.id)
-    #     if user_search_limitations:
-    #         search_condition = and_(Cases.case_id.in_(user_search_limitations))
-    #
-    #     else:
-    #         return response_success("Results fetched", [])
+    user_search_limitations = ac_get_fast_user_cases_access(current_user.id)
+    if user_search_limitations:
+        search_condition = and_(Cases.case_id.in_(user_search_limitations))
+
+    if search_type == 'query':
+
+        sp = SearchParser()
+        sp.parse(search_value)
+
+        return response_success({'results': []})
 
     if search_type == "ioc":
         res = Ioc.query.with_entities(
@@ -93,6 +115,26 @@ def search_file_post(caseid: int):
                             search_condition
                         )
                     ).join(Ioc.ioc_type).all()
+
+        files = [row._asdict() for row in res]
+
+    if search_type == 'cases':
+        res = Cases.query.with_entities(
+                            Cases.name.label('case_name'),
+                            Cases.case_id,
+                            Client.name.label('customer_name')
+                    ).filter(
+                        and_(
+                            or_(
+                                Cases.name.like(search_value),
+                                Cases.case_id.like(search_value),
+                                Cases.description.like(search_value),
+                                Cases.client.name.like(search_value)
+                            ),
+                            Client.client_id == Cases.client_id,
+                            search_condition
+                        )
+                    ).all()
 
         files = [row._asdict() for row in res]
 
