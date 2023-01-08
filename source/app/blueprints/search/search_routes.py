@@ -91,11 +91,15 @@ def search_file_post(caseid: int):
     if search_type == 'query':
 
         sp = SearchParser()
-        success, logs, results = sp.parse(search_value)
+        success, logs, results, tables = sp.parse(search_value)
         if success:
 
             results = [r._asdict() for r in results]
-            return response_success(data={'results': results, 'logs': logs})
+            columns = []
+            for table in tables:
+                columns.extend([c for c in table.columns.keys()])
+
+            return response_success(data={'results': results, 'logs': logs, 'columns': columns})
 
         else:
             return response_error(msg='Search failed', data={'logs': logs})

@@ -115,7 +115,7 @@ class SearchParser(object):
 
                     log.warning(f"Search query produced a warning: {caught_warnings[0].message}")
 
-            return True, logs ,results
+            return True, logs ,results, tables
 
         except pp.ParseException as e:
             log.error("Error parsing query: %s", e)

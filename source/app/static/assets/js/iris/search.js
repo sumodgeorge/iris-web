@@ -173,6 +173,26 @@ function search() {
                         $(e.target).popover('toggle');
                 });
             }
+            else if (val == 'query') {
+                tableHeaders = "";
+                columns = [];
+                $.each(data.data.columns, function (i, val) {
+                    columns.push({ "data": val });
+                    tableHeaders += "<th>" + val + "</th>";
+                });
+                if ( $.fn.dataTable.isDataTable( '#query_search_table' ) ) {
+                    table = $('#query_search_table').DataTable();
+                    table.destroy();
+                }
+                $("#query_search_table").empty();
+
+                $("#query_search_table").append('<thead><tr>' + tableHeaders + '</tr></thead>');
+                $('#query_search_table').DataTable( {
+                    columns: columns,
+                    data: data.data.results
+                });
+                $('#search_table_wrapper_query').show();
+            }
             else if (val == "notes") {
                 for (e in data.data) {
                     li = `<li class="list-group-item">
