@@ -90,9 +90,9 @@ def search_file_post(caseid: int):
     if search_type == 'query':
 
         sp = SearchParser()
-        sp.parse(search_value)
+        results = [r._asdict() for r in sp.parse(search_value)]
 
-        return response_success({'results': []})
+        return response_success({'results': results})
 
     if search_type == "ioc":
         res = Ioc.query.with_entities(

@@ -20,6 +20,7 @@ from sqlalchemy import and_
 from sqlalchemy import or_
 
 import app
+from app import db
 from app.iris_engine.search.search_mapping import search_fields
 from app.iris_engine.search.search_mapping import search_separator
 
@@ -93,8 +94,10 @@ class SearchParser(object):
         try:
 
             cpe = self.parser.parse_string(query)
-            query = self.parse_sub_expr(expr=cpe[0])
-            print(query)
+            tables, query = self.parse_sub_expr(expr=cpe[0])
+
+            results = db.session.query(*tables).filter(query).all()
+            return results
 
         except pp.ParseException as e:
             log.error("Error parsing query: %s", e)
@@ -117,43 +120,49 @@ class SearchParser(object):
         rterm = expr[2]
         rterm_istr = True
         lterm_istr = True
+        query_table_1 = set()
+        query_table_2 = set()
         query_exp_2 = None
         query_exp_1 = None
 
         if type(lterm) is not str:
             lterm_istr = False
-            query_exp_1 = self.parse_sub_expr(expr=lterm)
+            query_table_1, query_exp_1 = self.parse_sub_expr(expr=lterm)
 
         if type(rterm) is not str:
             rterm_istr = False
-            query_exp_2 = self.parse_sub_expr(expr=rterm)
+            query_table_2, query_exp_2 = self.parse_sub_expr(expr=rterm)
 
         if operator in search_separator:
             if not lterm_istr:
                 log.warning('Invalid expression. Field is not a string')
-                return None
+                return None, None
 
             if not rterm_istr:
                 log.warning('Invalid expression. Value is not a string')
-                return None
+                return None, None
 
             if lterm not in search_fields:
                 log.warning(f'Unknown field type for {lterm}')
-                return None
+                return None, None
 
             # build query part
-            query = and_(search_fields[lterm] == rterm)
-            return query
+            if "*" in rterm:
+                query = search_fields[lterm].ilike(rterm.replace("*", "%"))
+            else:
+                query = search_fields[lterm] == rterm
+
+            return {search_fields[lterm].table}, query
 
         else:
             if operator.lower() == 'and':
                 if lterm_istr and rterm_istr:
                     log.warning('Invalid expression. Both terms are strings')
-                    return None
+                    return None, None
 
                 query = and_(query_exp_2, query_exp_1)
 
-                return query
+                return query_table_1.union(query_table_2), query
 
             elif operator.lower() == 'or':
                 if lterm_istr and rterm_istr:
@@ -162,4 +171,4 @@ class SearchParser(object):
 
                 query = or_(query_exp_2, query_exp_1)
 
-                return query
+                return query_table_1.union(query_table_2), query

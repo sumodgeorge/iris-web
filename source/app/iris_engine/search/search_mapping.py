@@ -48,6 +48,7 @@ search_asset_fields = {
     'asset.custom_attributes': CaseAssets.custom_attributes
 }
 
+
 search_fields = {}
 search_fields.update(search_asset_fields)
 search_fields.update(search_case_fields)
