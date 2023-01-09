@@ -332,7 +332,7 @@ $(document).ready(function(){
     gs_filter.setOption("displayIndentGuides", true);
     gs_filter.setOption("indentedSoftWrap", true);
     gs_filter.setOption("showLineNumbers", false);
-    gs_filter.setOption("placeholder", "Filter timeline");
+    gs_filter.setOption("placeholder", "Search for anything... use 'OR' and 'AND' to combine filters. Use * as wildcard. Example: 'client.name:John* OR client.name:Jane'");
     gs_filter.setOption("highlightActiveLine", false);
     gs_filter.commands.addCommand({
                         name: "Do filter",
