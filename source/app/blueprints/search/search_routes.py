@@ -96,6 +96,9 @@ def search_file_post(caseid: int):
 
     track_activity("started a global search for {} on {}".format(search_value, search_type))
 
+    if search_value is None or search_type is None:
+        return response_error("Missing search value or type")
+
     user_search_limitations = ac_get_fast_user_cases_access(current_user.id)
     if user_search_limitations:
         search_condition = and_(Cases.case_id.in_(user_search_limitations))

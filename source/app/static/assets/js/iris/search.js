@@ -155,11 +155,12 @@ function search() {
 
     var data_sent = $('form#form_search').serializeObject();
     data_sent['csrf_token'] = $('#csrf_token').val();
+    data_sent['search_value'] = gs_filter.getValue();
     post_request_api('/search', JSON.stringify(data_sent), true, function (data) {
             $('#submit_search').text("Searching...");
     })
     .done((data) => {
-        if(notify_auto_api(data, true)) {
+        if(notify_auto_api(data)) {
               $('#notes_msearch_list').empty();
               Table_1.clear();
               Table_comments.clear();
@@ -282,12 +283,33 @@ function search() {
 
 var targetEntities = null;
 var searchFields = null;
+var gs_filter = null;
 function get_target_entities() {
     get_request_api('/search/target-entities', true)
     .done((data) => {
         if(notify_auto_api(data, true)) {
             targetEntities = data.data.urls_mapping;
             searchFields = data.data.search_fields;
+            standard_filters = [
+                {"value": "OR", score: 10},
+                {"value": "AND", score: 10},
+            ];
+
+            for (i in data.data.search_fields) {
+                standard_filters.push({
+                    value: data.data.search_fields[i] + ":",
+                    score: 1
+                });
+            }
+
+            gs_filter.setOptions({
+              enableBasicAutocompletion: [{
+                getCompletions: (editor, session, pos, prefix, callback) => {
+                  callback(null, standard_filters);
+                },
+              }],
+              enableLiveAutocompletion: true,
+            });
         }
     });
 }
@@ -295,4 +317,28 @@ function get_target_entities() {
 $(document).ready(function(){
     $('#search_value').focus();
     get_target_entities();
+
+    gs_filter = ace.edit("global_search",
+    {
+        autoScrollEditorIntoView: true,
+        minLines: 1,
+        maxLines: 5
+    });
+    gs_filter.setTheme("ace/theme/tomorrow");
+    gs_filter.session.setMode("ace/mode/lucene");
+    gs_filter.renderer.setShowGutter(false);
+    gs_filter.setShowPrintMargin(false);
+    gs_filter.renderer.setScrollMargin(10, 10);
+    gs_filter.setOption("displayIndentGuides", true);
+    gs_filter.setOption("indentedSoftWrap", true);
+    gs_filter.setOption("showLineNumbers", false);
+    gs_filter.setOption("placeholder", "Filter timeline");
+    gs_filter.setOption("highlightActiveLine", false);
+    gs_filter.commands.addCommand({
+                        name: "Do filter",
+                        bindKey: { win: "Enter", mac: "Enter" },
+                        exec: function (editor) {
+                                  search();
+                        }
+    });
 });
