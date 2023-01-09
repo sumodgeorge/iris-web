@@ -91,18 +91,19 @@ def search_file_post(caseid: int):
     if search_type == 'query':
 
         sp = SearchParser()
-        success, logs, results, tables = sp.parse(search_value)
-        if success:
-
-            results = [r._asdict() for r in results]
+        if sp.parse(search_value):
+            results = [r._asdict for r in sp.results]
             columns = []
-            for table in tables:
-                columns.extend([c for c in table.columns.keys()])
+            for table in sp.tables:
+                columns.extend(table.columns.keys())
 
-            return response_success(data={'results': results, 'logs': logs, 'columns': columns})
+            return response_success(data={'results': results,
+                                          'logs': sp.logs,
+                                          'columns': columns,
+                                          'has_warnings': sp.has_warnings})
 
         else:
-            return response_error(msg='Search failed', data={'logs': logs})
+            return response_error(msg='Search failed', data={'logs': sp.logs})
 
     if search_type == "ioc":
         res = Ioc.query.with_entities(

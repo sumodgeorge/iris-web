@@ -174,10 +174,26 @@ function search() {
                 });
             }
             else if (val == 'query') {
+                if (data.data.has_warnings) {
+                    $('#query_messages_feedback').html(`<b class="text-warning">${data.data.logs}<b>`);
+                }
                 tableHeaders = "";
                 columns = [];
                 $.each(data.data.columns, function (i, val) {
-                    columns.push({ "data": val });
+                    if (val == 'case_id') {
+                        columns.push({
+                            "data": val,
+                            "render": function (data, type, row, meta) {
+                                if (type === 'display') {
+                                    data = sanitizeHTML(data);
+                                    data = '<a target="_blank" href="case?cid='+ data +'">' + row['case_name'] + '</a>';
+                                }
+                                return data;
+                            }
+                        });
+                    } else {
+                        columns.push({ "data": val });
+                    }
                     tableHeaders += "<th>" + val + "</th>";
                 });
                 if ( $.fn.dataTable.isDataTable( '#query_search_table' ) ) {
@@ -187,10 +203,32 @@ function search() {
                 $("#query_search_table").empty();
 
                 $("#query_search_table").append('<thead><tr>' + tableHeaders + '</tr></thead>');
-                $('#query_search_table').DataTable( {
-                    columns: columns,
-                    data: data.data.results
+                $.each($.find("table"), function(index, element){
+                    addFilterFields($(element).attr("id"));
                 });
+                var table = $('#query_search_table').DataTable( {
+                    columns: columns,
+                    data: data.data.results,
+                    filter: true,
+                    info: true,
+                    ordering: true,
+                    processing: true,
+                    responsive: {
+                        details: {
+                            display: $.fn.dataTable.Responsive.display.childRow,
+                            renderer: $.fn.dataTable.Responsive.renderer.tableAll()
+                        }
+                    },
+                    buttons: [],
+                    orderCellsTop: true,
+                    initComplete: function () {
+                        tableFiltering(this.api(), 'query_search_table');
+                    }
+                });
+                table.on( 'responsive-resize', function ( e, datatable, columns ) {
+                        hide_table_search_input( columns );
+                });
+                table.columns.adjust().draw();
                 $('#search_table_wrapper_query').show();
             }
             else if (val == "notes") {

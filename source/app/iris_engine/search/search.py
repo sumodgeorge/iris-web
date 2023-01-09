@@ -33,6 +33,11 @@ log = app.logger
 
 class SearchParser(object):
     def __init__(self):
+        self.has_warnings = False
+        self.logs = []
+        self.results = None
+        self.has_errors = False
+        self.tables = None
         # Inspired from pyparsing lucene example
         pp.ParserElement.enablePackrat()
 
@@ -115,11 +120,18 @@ class SearchParser(object):
 
                     log.warning(f"Search query produced a warning: {caught_warnings[0].message}")
 
-            return True, logs ,results, tables
+            self.logs = logs
+            self.results = results
+            self.has_warnings = True if logs else False
+            self.tables = tables
+
+            return True
 
         except pp.ParseException as e:
             log.error("Error parsing query: %s", e)
-            return False, e.__str__(), None
+            self.logs = [f"Error parsing query: {e}"]
+            self.has_errors = True
+            return False
 
     def parse_sub_expr(self, expr):
         if not isinstance(expr, pp.ParseResults):
