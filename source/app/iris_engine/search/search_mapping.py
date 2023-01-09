@@ -18,6 +18,10 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 from app.models import AssetsType
 from app.models import Client
+from app.models import Ioc
+from app.models import IocLink
+from app.models import IocType
+from app.models import Tlp
 from app.models.authorization import User
 from app.models.cases import Cases
 from app.models.models import CaseAssets
@@ -87,15 +91,51 @@ search_asset_fields = {
     ]
 }
 
+search_ioc_fields = {
+    "scope": "ioc",
+    "fields": {
+        'ioc.id': Ioc.ioc_id,
+        'ioc.uuid': Ioc.ioc_uuid,
+        'ioc.value': Ioc.ioc_value,
+        'ioc.type_name': IocType.type_name,
+        'ioc.description': Ioc.ioc_description,
+        'ioc.tags': Ioc.ioc_tags,
+        'ioc.custom_attributes': Ioc.custom_attributes,
+        'ioc.tlp_name': Tlp.tlp_name,
+        'ioc.creator': User.user,
+        'ioc.case_id': IocLink.case_id,
+        'ioc.case_name': Cases.name
+    },
+    "distinct": [Ioc.ioc_uuid],
+    "joins": [Ioc.user, Ioc.tlp, IocLink.ioc, IocLink.case, Ioc.ioc_type],
+    "entities": [
+        Cases.case_id,
+        Cases.name.label('case_name'),
+        Ioc.ioc_id,
+        Ioc.ioc_value,
+        Ioc.ioc_description,
+        Ioc.ioc_tags,
+        Ioc.custom_attributes.label('ioc_custom_attributes'),
+        Tlp.tlp_name,
+        Tlp.tlp_id,
+        User.user.label('ioc_creator'),
+        Ioc.ioc_uuid,
+        IocType.type_name.label('ioc_type_name'),
+        IocType.type_id.label('ioc_type_id')
+    ]
+}
+
 
 search_fields = {
     "case": search_case_fields,
-    "asset": search_asset_fields
+    "asset": search_asset_fields,
+    "ioc": search_ioc_fields
 }
 
 urls_mapping = {
     'case_id': '/case',
-    'asset_id': '/case/assets'
+    'asset_id': '/case/assets',
+    'ioc_id': '/case/iocs'
 }
 
 search_boolean_op = ['and', 'or']
