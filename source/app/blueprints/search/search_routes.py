@@ -33,6 +33,7 @@ from app.forms import SearchForm
 from app.iris_engine.access_control.utils import ac_flag_match_mask
 from app.iris_engine.access_control.utils import ac_get_fast_user_cases_access
 from app.iris_engine.search.search import SearchParser
+from app.iris_engine.search.search_mapping import target_entities
 from app.iris_engine.utils.tracker import track_activity
 from app.models import Comments
 from app.models.authorization import Permissions
@@ -72,8 +73,14 @@ def search_query(caseid: int):
     return response_success({'results': []})
 
 # CONTENT ------------------------------------------------
+
+@search_blueprint.route('/search/target-entities', methods=['GET'])
+@ac_api_requires(Permissions.standard_user)
+def search_get_target_entities(caseid: int):
+    return response_success(data=target_entities)
+
 @search_blueprint.route('/search', methods=['POST'])
-@ac_api_requires(Permissions.server_administrator)
+@ac_api_requires(Permissions.standard_user)
 def search_file_post(caseid: int):
 
     jsdata = request.get_json()
@@ -92,15 +99,14 @@ def search_file_post(caseid: int):
 
         sp = SearchParser()
         if sp.parse(search_value):
-            results = [r._asdict for r in sp.results]
-            columns = []
-            for table in sp.tables:
-                columns.extend(table.columns.keys())
+            results = [r._asdict() for r in sp.results]
 
-            return response_success(data={'results': results,
-                                          'logs': sp.logs,
-                                          'columns': columns,
-                                          'has_warnings': sp.has_warnings})
+            data = {'results': results,
+                    'logs': sp.logs,
+                    'columns': sp.entities,
+                    'has_warnings': sp.has_warnings}
+
+            return response_success(data=data)
 
         else:
             return response_error(msg='Search failed', data={'logs': sp.logs})

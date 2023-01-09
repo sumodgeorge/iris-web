@@ -17,41 +17,86 @@
 #  along with this program; if not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 from app.models import AssetsType
+from app.models import Client
 from app.models.authorization import User
 from app.models.cases import Cases
 from app.models.models import CaseAssets
 
 search_case_fields = {
-    'case.id': Cases.case_id,
-    'case.name': Cases.name,
-    'case.description': Cases.description,
-    'case.open_date': Cases.open_date,
-    'case.close_date': Cases.close_date,
-    'case.client_id': Cases.client_id,
-    'case.soc_id': Cases.soc_id,
-    'case.owner': User.user,
-    'case.uuid': Cases.case_uuid,
-    'case.custom_attributes': Cases.custom_attributes
+    "scope": "case",
+    "fields": {
+        'case.id': Cases.case_id,
+        'case.name': Cases.name,
+        'case.description': Cases.description,
+        'case.open_date': Cases.open_date,
+        'case.close_date': Cases.close_date,
+        'case.client_id': Cases.client_id,
+        'case.client_name': Client.name,
+        'case.soc_id': Cases.soc_id,
+        'case.owner': User.user,
+        'case.uuid': Cases.case_uuid,
+        'case.custom_attributes': Cases.custom_attributes
+    },
+    "distinct": [Cases.case_id],
+    "joins": [Cases.client, Cases.user],
+    "entities": [
+        Cases.case_id,
+        Cases.name.label('case_name'),
+        Cases.description.label('case_description'),
+        Cases.open_date.label('case_open_date'),
+        Cases.close_date.label('case_close_date'),
+        Cases.client_id.label('case_client_id'),
+        Cases.soc_id.label('case_soc_id'),
+        Cases.case_uuid.label('case_uuid'),
+        Cases.custom_attributes.label('case_custom_attributes'),
+        Client.name.label('client_name'),
+        User.user.label('case_owner')
+    ]
 }
 
 search_asset_fields = {
-    'asset.id': CaseAssets.asset_id,
-    'asset.case_id': CaseAssets.case_id,
-    'asset.type_name': AssetsType.asset_name,
-    'asset.name': CaseAssets.asset_name,
-    'asset.description': CaseAssets.asset_description,
-    'asset.uuid': CaseAssets.asset_uuid,
-    'asset.ip': CaseAssets.asset_ip,
-    'asset.domain': CaseAssets.asset_domain,
-    'asset.tags': CaseAssets.asset_tags,
-    'asset.info': CaseAssets.asset_info,
-    'asset.custom_attributes': CaseAssets.custom_attributes
+    "scope": "asset",
+    "fields": {
+        'asset.id': CaseAssets.asset_id,
+        'asset.case_id': CaseAssets.case_id,
+        'asset.type_name': AssetsType.asset_name,
+        'asset.name': CaseAssets.asset_name,
+        'asset.description': CaseAssets.asset_description,
+        'asset.uuid': CaseAssets.asset_uuid,
+        'asset.ip': CaseAssets.asset_ip,
+        'asset.domain': CaseAssets.asset_domain,
+        'asset.tags': CaseAssets.asset_tags,
+        'asset.info': CaseAssets.asset_info,
+        'asset.custom_attributes': CaseAssets.custom_attributes
+    },
+    "distinct": [CaseAssets.asset_uuid],
+    "joins": [CaseAssets.asset_type, CaseAssets.case],
+    "entities": [
+        CaseAssets.case_id,
+        Cases.name.label('case_name'),
+        CaseAssets.asset_id,
+        CaseAssets.asset_name,
+        CaseAssets.asset_description,
+        CaseAssets.asset_uuid,
+        CaseAssets.asset_ip,
+        CaseAssets.asset_domain,
+        CaseAssets.asset_tags,
+        CaseAssets.asset_info,
+        CaseAssets.custom_attributes.label('asset_custom_attributes'),
+        AssetsType.asset_name.label('asset_type_name')
+    ]
 }
 
 
-search_fields = {}
-search_fields.update(search_asset_fields)
-search_fields.update(search_case_fields)
+search_fields = {
+    "case": search_case_fields,
+    "asset": search_asset_fields
+}
+
+target_entities = {
+    'case_id': '/case',
+    'asset_id': '/case/assets'
+}
 
 search_boolean_op = ['and', 'or']
 

@@ -148,6 +148,11 @@ $('#submit_search').click(function () {
 
 
 function search() {
+    if (targetEntities.length == 0) {
+        get_target_entities();
+        notify_error('Unable to get target entities, please try again later');
+    }
+
     var data_sent = $('form#form_search').serializeObject();
     data_sent['csrf_token'] = $('#csrf_token').val();
     post_request_api('/search', JSON.stringify(data_sent), true, function (data) {
@@ -176,17 +181,20 @@ function search() {
             else if (val == 'query') {
                 if (data.data.has_warnings) {
                     $('#query_messages_feedback').html(`<b><i class="text-danger fa-solid fa-triangle-exclamation mr-1"></i>${data.data.logs}</b>`);
+                } else {
+                    $('#query_messages_feedback').empty();
                 }
                 tableHeaders = "";
                 columns = [];
                 $.each(data.data.columns, function (i, val) {
-                    if (val == 'case_id') {
+                    console.log(val);
+                    if (val in targetEntities) {
                         columns.push({
                             "data": val,
                             "render": function (data, type, row, meta) {
                                 if (type === 'display') {
                                     data = sanitizeHTML(data);
-                                    data = '<a target="_blank" href="case?cid='+ data +'">' + row['case_name'] + '</a>';
+                                    data = `<a target="_blank" href="${targetEntities[val]}?cid=${row['case_id']}&shared=${row[val]}">#${row[val]}</a>`;
                                 }
                                 return data;
                             }
@@ -194,7 +202,7 @@ function search() {
                     } else {
                         columns.push({ "data": val });
                     }
-                    tableHeaders += "<th>" + val + "</th>";
+                    tableHeaders += "<th>" + capitalizeFirstLetter(val.replaceAll('_', ' ')) + "</th>";
                 });
                 if ( $.fn.dataTable.isDataTable( '#query_search_table' ) ) {
                     table = $('#query_search_table').DataTable();
@@ -257,6 +265,17 @@ function search() {
     });
 }
 
+var targetEntities = null;
+function get_target_entities() {
+    get_request_api('/search/target-entities', true)
+    .done((data) => {
+        if(notify_auto_api(data, true)) {
+            targetEntities = data.data;
+        }
+    });
+}
+
 $(document).ready(function(){
     $('#search_value').focus();
+    get_target_entities();
 });

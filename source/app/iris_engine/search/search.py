@@ -38,6 +38,8 @@ class SearchParser(object):
         self.results = None
         self.has_errors = False
         self.tables = None
+        self.entities = None
+
         # Inspired from pyparsing lucene example
         pp.ParserElement.enablePackrat()
 
@@ -101,12 +103,36 @@ class SearchParser(object):
         try:
 
             cpe = self.parser.parse_string(query)
-            tables, query = self.parse_sub_expr(expr=cpe[0])
+            scopes, query = self.parse_sub_expr(expr=cpe[0])
             logs = []
+
+            joins, entities, tables, distinct = self.get_settings_from_scopes(scopes=scopes)
 
             with warnings.catch_warnings(record=True) as caught_warnings:
 
-                results = db.session.query(*tables).filter(query).all()
+                if joins:
+                    results = db.session.query(
+                        *tables
+                    ).with_entities(
+                        *entities
+                    ).filter(
+                        query
+                    ).join(
+                        *joins
+                    ).distinct(
+                        *distinct
+                    ).all()
+
+                else:
+                    results = db.session.query(
+                        *tables
+                    ).with_entities(
+                        *entities
+                    ).filter(
+                        query
+                    ).distinct(
+                        *distinct
+                    ).all()
 
                 if caught_warnings:
 
@@ -123,6 +149,7 @@ class SearchParser(object):
             self.results = results
             self.has_warnings = True if logs else False
             self.tables = tables
+            self.entities = list(results[0]._fields) if results else []
 
             return True
 
@@ -133,8 +160,6 @@ class SearchParser(object):
             return False
 
     def parse_sub_expr(self, expr):
-        if not isinstance(expr, pp.ParseResults):
-            return expr
 
         if len(expr) == 1 and isinstance(expr[0], pp.ParseResults):
             return self.parse_sub_expr(expr[0])
@@ -149,18 +174,18 @@ class SearchParser(object):
         rterm = expr[2]
         rterm_istr = True
         lterm_istr = True
-        query_table_1 = set()
-        query_table_2 = set()
+        query_scope_1 = set()
+        query_scope_2 = set()
         query_exp_2 = None
         query_exp_1 = None
 
         if type(lterm) is not str:
             lterm_istr = False
-            query_table_1, query_exp_1 = self.parse_sub_expr(expr=lterm)
+            query_scope_1, query_exp_1 = self.parse_sub_expr(expr=lterm)
 
         if type(rterm) is not str:
             rterm_istr = False
-            query_table_2, query_exp_2 = self.parse_sub_expr(expr=rterm)
+            query_scope_2, query_exp_2 = self.parse_sub_expr(expr=rterm)
 
         if operator in search_separator:
             if not lterm_istr:
@@ -171,17 +196,18 @@ class SearchParser(object):
                 log.warning('Invalid expression. Value is not a string')
                 return None, None
 
-            if lterm not in search_fields:
+            term_scope = self.get_term_scope(lterm)
+            if term_scope is None:
                 log.warning(f'Unknown field type for {lterm}')
                 return None, None
 
             # build query part
             if "*" in rterm:
-                query = search_fields[lterm].ilike(rterm.replace("*", "%"))
+                query = term_scope['fields'][lterm].ilike(rterm.replace("*", "%"))
             else:
-                query = search_fields[lterm] == rterm
+                query = term_scope['fields'][lterm] == rterm
 
-            return {search_fields[lterm].table}, query
+            return {term_scope['scope']}, query
 
         else:
             if operator.lower() == 'and':
@@ -191,7 +217,7 @@ class SearchParser(object):
 
                 query = and_(query_exp_2, query_exp_1)
 
-                return query_table_1.union(query_table_2), query
+                return query_scope_1.union(query_scope_2), query
 
             elif operator.lower() == 'or':
                 if lterm_istr and rterm_istr:
@@ -200,4 +226,27 @@ class SearchParser(object):
 
                 query = or_(query_exp_2, query_exp_1)
 
-                return query_table_1.union(query_table_2), query
+                return query_scope_1.union(query_scope_2), query
+
+    @staticmethod
+    def get_term_scope(term: str):
+        for scope in search_fields:
+            if term in search_fields[scope]['fields']:
+                return search_fields[scope]
+
+        return None
+
+    @staticmethod
+    def get_settings_from_scopes(scopes: list):
+        joins = set()
+        entities = set()
+        tables = set()
+        distinct = set()
+
+        for scope in scopes:
+            joins.update(search_fields[scope]['joins'])
+            entities.update(set(search_fields[scope]['entities']))
+            tables.add(next(iter(search_fields[scope]['fields'].items()))[1].table)
+            distinct.update(search_fields[scope]['distinct'])
+
+        return joins, entities, tables, distinct
