@@ -183,6 +183,7 @@ function search() {
                     $('#query_messages_feedback').html(`<b><i class="text-danger fa-solid fa-triangle-exclamation mr-1"></i>${data.data.logs}</b>`);
                 } else if (data.data.results.length == 0) {
                     $('#query_messages_feedback').html(`<b><i class="text-danger fa-solid fa-triangle-exclamation mr-1"></i>Query returned no results</b>`);
+                    $('#search_table_wrapper_query').hide();
                     return;
                 } else {
                     $('#query_messages_feedback').empty();
