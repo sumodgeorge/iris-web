@@ -93,7 +93,7 @@ search_fields = {
     "asset": search_asset_fields
 }
 
-target_entities = {
+urls_mapping = {
     'case_id': '/case',
     'asset_id': '/case/assets'
 }
@@ -101,3 +101,8 @@ target_entities = {
 search_boolean_op = ['and', 'or']
 
 search_separator = [':']
+
+def yield_search_fields():
+    for scope in search_fields:
+        for field in search_fields[scope]['fields']:
+            yield field

@@ -281,11 +281,13 @@ function search() {
 }
 
 var targetEntities = null;
+var searchFields = null;
 function get_target_entities() {
     get_request_api('/search/target-entities', true)
     .done((data) => {
         if(notify_auto_api(data, true)) {
-            targetEntities = data.data;
+            targetEntities = data.data.urls_mapping;
+            searchFields = data.data.search_fields;
         }
     });
 }

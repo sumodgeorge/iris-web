@@ -33,7 +33,8 @@ from app.forms import SearchForm
 from app.iris_engine.access_control.utils import ac_flag_match_mask
 from app.iris_engine.access_control.utils import ac_get_fast_user_cases_access
 from app.iris_engine.search.search import SearchParser
-from app.iris_engine.search.search_mapping import target_entities
+from app.iris_engine.search.search_mapping import urls_mapping
+from app.iris_engine.search.search_mapping import yield_search_fields
 from app.iris_engine.utils.tracker import track_activity
 from app.models import Comments
 from app.models.authorization import Permissions
@@ -77,6 +78,10 @@ def search_query(caseid: int):
 @search_blueprint.route('/search/target-entities', methods=['GET'])
 @ac_api_requires(Permissions.standard_user)
 def search_get_target_entities(caseid: int):
+    target_entities = {
+        'urls_mapping': urls_mapping,
+        'search_fields': [entity for entity in yield_search_fields()]
+    }
     return response_success(data=target_entities)
 
 @search_blueprint.route('/search', methods=['POST'])
