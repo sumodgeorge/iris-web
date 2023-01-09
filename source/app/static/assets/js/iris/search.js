@@ -181,13 +181,15 @@ function search() {
             else if (val == 'query') {
                 if (data.data.has_warnings) {
                     $('#query_messages_feedback').html(`<b><i class="text-danger fa-solid fa-triangle-exclamation mr-1"></i>${data.data.logs}</b>`);
+                } else if (data.data.results.length == 0) {
+                    $('#query_messages_feedback').html(`<b><i class="text-danger fa-solid fa-triangle-exclamation mr-1"></i>Query returned no results</b>`);
+                    return;
                 } else {
                     $('#query_messages_feedback').empty();
                 }
                 tableHeaders = "";
                 columns = [];
                 $.each(data.data.columns, function (i, val) {
-                    console.log(val);
                     if (val in targetEntities) {
                         columns.push({
                             "data": val,
@@ -199,8 +201,26 @@ function search() {
                                 return data;
                             }
                         });
+                    } else if (val.endsWith('_custom_attributes')) {
+                        columns.push({
+                            "data": val,
+                            "render": function (data, type, row, meta) {
+                                if (type === 'display') {
+                                    data = sanitizeHTML(JSON.stringify(data));
+                                }
+                                return data;
+                            }
+                        });
                     } else {
-                        columns.push({ "data": val });
+                        columns.push({
+                            "data": val,
+                            "render": function (data, type, row, meta) {
+                                if (type === 'display') {
+                                    data = sanitizeHTML(data);
+                                }
+                                return data;
+                            }
+                        });
                     }
                     tableHeaders += "<th>" + capitalizeFirstLetter(val.replaceAll('_', ' ')) + "</th>";
                 });
