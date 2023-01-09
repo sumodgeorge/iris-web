@@ -175,7 +175,7 @@ function search() {
             }
             else if (val == 'query') {
                 if (data.data.has_warnings) {
-                    $('#query_messages_feedback').html(`<b class="text-warning">${data.data.logs}<b>`);
+                    $('#query_messages_feedback').html(`<b><i class="text-danger fa-solid fa-triangle-exclamation mr-1"></i>${data.data.logs}</b>`);
                 }
                 tableHeaders = "";
                 columns = [];

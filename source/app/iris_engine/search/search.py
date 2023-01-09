@@ -106,7 +106,6 @@ class SearchParser(object):
 
             with warnings.catch_warnings(record=True) as caught_warnings:
 
-                warnings.simplefilter("always")
                 results = db.session.query(*tables).filter(query).all()
 
                 if caught_warnings:
