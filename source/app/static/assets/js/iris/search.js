@@ -247,13 +247,7 @@ function search() {
                         }
                     },
                     buttons: [],
-                    orderCellsTop: true,
-                    initComplete: function () {
-                        tableFiltering(this.api(), 'query_search_table');
-                    }
-                });
-                table.on( 'responsive-resize', function ( e, datatable, columns ) {
-                        hide_table_search_input( columns );
+                    orderCellsTop: true
                 });
 
                 $('#search_table_wrapper_query').show();
