@@ -232,9 +232,7 @@ function search() {
                 $("#query_search_table").empty();
 
                 $("#query_search_table").append('<thead><tr>' + tableHeaders + '</tr></thead>');
-                $.each($.find("table"), function(index, element){
-                    addFilterFields($(element).attr("id"));
-                });
+
                 var table = $('#query_search_table').DataTable( {
                     columns: columns,
                     data: data.data.results,
@@ -257,8 +255,10 @@ function search() {
                 table.on( 'responsive-resize', function ( e, datatable, columns ) {
                         hide_table_search_input( columns );
                 });
-                table.columns.adjust().draw();
+
                 $('#search_table_wrapper_query').show();
+                table.columns.adjust().draw();
+                table.responsive.recalc();
             }
             else if (val == "notes") {
                 for (e in data.data) {
