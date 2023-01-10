@@ -103,8 +103,14 @@ class SearchParser(object):
         try:
 
             cpe = self.parser.parse_string(query)
+            if not cpe[0]:
+                return False
+
             scopes, query = self.parse_sub_expr(expr=cpe[0])
             logs = []
+
+            if not scopes:
+                return False
 
             joins, entities, tables, distinct = self.get_settings_from_scopes(scopes=scopes)
 
@@ -140,9 +146,10 @@ class SearchParser(object):
                         logs = [
                             "Search query mixes incompatible fields, please refine your query. Search results may be incomplete."
                         ]
+                        self.logs.extend(logs)
                     else:
                         logs = [str(w.message) for w in caught_warnings]
-
+                        self.logs.extend(logs)
                     log.warning(f"Search query produced a warning: {caught_warnings[0].message}")
 
             self.logs = logs
@@ -155,7 +162,13 @@ class SearchParser(object):
 
         except pp.ParseException as e:
             log.error("Error parsing query: %s", e)
-            self.logs = [f"Error parsing query: {e}"]
+            self.logs.append(f"Error parsing query: {e}")
+            self.has_errors = True
+            return False
+
+        except Exception as e:
+            log.error("Error parsing query: %s", e)
+            self.logs.append(f"Error executing query.")
             self.has_errors = True
             return False
 
@@ -166,8 +179,10 @@ class SearchParser(object):
 
         if len(expr) != 3:
             log.error('Invalid expression. Expected term:value')
+            self.logs.append('Invalid expression. Expected term:value')
+
             log.error(f'Got : {expr}')
-            return None
+            return None, None
 
         lterm = expr[0]
         operator = expr[1]
@@ -190,15 +205,18 @@ class SearchParser(object):
         if operator in search_separator:
             if not lterm_istr:
                 log.warning('Invalid expression. Field is not a string')
+                self.logs.append('Invalid expression. Field is not a string.')
                 return None, None
 
             if not rterm_istr:
                 log.warning('Invalid expression. Value is not a string')
+                self.logs.append('Invalid expression. Value is not a string.')
                 return None, None
 
             term_scope = self.get_term_scope(lterm)
             if term_scope is None:
                 log.warning(f'Unknown field type for {lterm}')
+                self.logs.append(f'Unknown field type for {lterm}.')
                 return None, None
 
             # build query part
@@ -213,6 +231,7 @@ class SearchParser(object):
             if operator.lower() == 'and':
                 if lterm_istr and rterm_istr:
                     log.warning('Invalid expression. Both terms are strings')
+                    self.logs.append('Invalid expression. Both terms are strings.')
                     return None, None
 
                 query = and_(query_exp_2, query_exp_1)
@@ -222,7 +241,8 @@ class SearchParser(object):
             elif operator.lower() == 'or':
                 if lterm_istr and rterm_istr:
                     log.warning('Invalid expression. Both terms are strings')
-                    return None
+                    self.logs.append('Invalid expression. Both terms are strings.')
+                    return None, None
 
                 query = or_(query_exp_2, query_exp_1)
 
