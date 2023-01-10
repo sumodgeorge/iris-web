@@ -107,9 +107,9 @@ search_ioc_fields = {
         'ioc.case_name': Cases.name
     },
     "distinct": [Ioc.ioc_uuid],
-    "joins": [Ioc.user, Ioc.tlp, IocLink.ioc, IocLink.case, Ioc.ioc_type],
+    "joins": [IocLink.ioc, IocLink.case, Ioc.user, Ioc.tlp,  Ioc.ioc_type],
     "entities": [
-        Cases.case_id,
+        IocLink.case_id,
         Cases.name.label('case_name'),
         Ioc.ioc_id,
         Ioc.ioc_value,

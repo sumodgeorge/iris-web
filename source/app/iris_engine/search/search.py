@@ -20,6 +20,8 @@ import warnings
 
 from sqlalchemy import and_
 from sqlalchemy import or_
+from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import sessionmaker
 
 import app
 from app import db
@@ -39,6 +41,7 @@ class SearchParser(object):
         self.has_errors = False
         self.tables = None
         self.entities = None
+        self.db_session = scoped_session(sessionmaker(autocommit=False, autoflush=True, bind=db.engine))
 
         # Inspired from pyparsing lucene example
         pp.ParserElement.enablePackrat()
@@ -99,6 +102,9 @@ class SearchParser(object):
 
         self.parser = expression
 
+    def __del__(self):
+        self.db_session.close()
+
     def parse(self, query):
         try:
 
@@ -117,7 +123,7 @@ class SearchParser(object):
             with warnings.catch_warnings(record=True) as caught_warnings:
 
                 if joins:
-                    results = db.session.query(
+                    results = self.db_session.query(
                         *tables
                     ).with_entities(
                         *entities
@@ -130,7 +136,7 @@ class SearchParser(object):
                     ).all()
 
                 else:
-                    results = db.session.query(
+                    results = self.db_session.query(
                         *tables
                     ).with_entities(
                         *entities
