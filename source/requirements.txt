@@ -42,3 +42,4 @@ dependencies/iris_vt_module-1.2.0-py3-none-any.whl
 dependencies/iris_misp_module-1.2.0-py3-none-any.whl
 dependencies/iris_webhooks_module-1.0.2-py3-none-any.whl
 dependencies/iris_intelowl_module-0.1.0-py3-none-any.whl
+dnspython>=2.6.0rc1 # not directly required, pinned by Snyk to avoid a vulnerability
